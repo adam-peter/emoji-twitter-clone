@@ -10,9 +10,21 @@ dayjs.extend(relativeTime);
 import { api } from "~/utils/api";
 import type { RouterOutputs } from "~/utils/api";
 import LoadingPage from "~/components/loading";
+import { useState } from "react";
 
 const CreatePostWizard = () => {
   const { user } = useUser();
+
+  const [input, setInput] = useState("");
+
+  const ctx = api.useContext();
+
+  const { mutate, isLoading: isPosting } = api.posts.create.useMutation({
+    onSuccess: () => {
+      setInput("");
+      void ctx.posts.getAll.invalidate();
+    },
+  });
 
   if (!user) return <div>Something went wrong</div>;
 
@@ -29,7 +41,11 @@ const CreatePostWizard = () => {
         type="text"
         placeholder="Type some emojis!"
         className="px grow bg-transparent outline-none"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        disabled={isPosting}
       />
+      <button onClick={() => mutate({ content: input })}>Post</button>
     </div>
   );
 };
@@ -52,7 +68,7 @@ const PostView = (props: PostWithUser) => {
           <span className="font-bold">{`@${author.username}`}</span>
           <span>{` · ${dayjs(post.createdAt).fromNow()}`}</span>
         </div>
-        <span>{post.content}</span>
+        <span className="text-2xl">{post.content}</span>
       </div>
     </div>
   );
@@ -66,7 +82,7 @@ const Feed = () => {
 
   return (
     <div className="flex flex-col">
-      {[...data, ...data]?.map((postData) => (
+      {data.map((postData) => (
         <PostView {...postData} key={postData.post.id} />
       ))}
     </div>
@@ -74,7 +90,7 @@ const Feed = () => {
 };
 
 const Home: NextPage = () => {
-  const {isSignedIn, isLoaded: userLoaded } = useUser();
+  const { isSignedIn, isLoaded: userLoaded } = useUser();
 
   //start fetching asap
   api.posts.getAll.useQuery();
@@ -100,8 +116,8 @@ const Home: NextPage = () => {
             )}
             {isSignedIn && <CreatePostWizard />}
           </div>
-          
-        <Feed />
+
+          <Feed />
         </div>
       </main>
     </>
