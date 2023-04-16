@@ -1,6 +1,6 @@
 import React from "react";
 
-const LoadingSpinner = (props: { size?: number }) => {
+export const LoadingSpinner = (props: { size?: number }) => {
   const { size } = props;
 
   return (

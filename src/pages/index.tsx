@@ -1,7 +1,10 @@
-import { SignInButton, useUser } from "@clerk/nextjs";
+import { useState } from "react";
 import { type NextPage } from "next";
 import Head from "next/head";
 import Image from "next/image";
+
+import toast from "react-hot-toast";
+import { SignInButton, useUser } from "@clerk/nextjs";
 
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -9,8 +12,7 @@ dayjs.extend(relativeTime);
 
 import { api } from "~/utils/api";
 import type { RouterOutputs } from "~/utils/api";
-import LoadingPage from "~/components/loading";
-import { useState } from "react";
+import LoadingPage, { LoadingSpinner } from "~/components/loading";
 
 const CreatePostWizard = () => {
   const { user } = useUser();
@@ -24,9 +26,22 @@ const CreatePostWizard = () => {
       setInput("");
       void ctx.posts.getAll.invalidate();
     },
+    onError: (e) => {
+      const errorMessage = e.data?.zodError?.fieldErrors.content;
+      if (errorMessage && errorMessage[0]) {
+        toast.error(errorMessage[0]);
+      } else {
+        toast.error("Failed to post! Please try again later.");
+      }
+    },
   });
 
   if (!user) return <div>Something went wrong</div>;
+
+  const handlePost = () => {
+    if (input === "") return;
+    mutate({ content: input });
+  };
 
   return (
     <div className="flex w-full gap-3">
@@ -43,9 +58,20 @@ const CreatePostWizard = () => {
         className="px grow bg-transparent outline-none"
         value={input}
         onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => {
+          e.preventDefault();
+          if (e.key === "Enter" && input !== "") {
+            handlePost;
+          }
+        }}
         disabled={isPosting}
       />
-      <button onClick={() => mutate({ content: input })}>Post</button>
+      {input !== "" && !isPosting && <button onClick={handlePost}>Post</button>}
+      {isPosting && (
+        <div className="flex items-center justify-center">
+          <LoadingSpinner size={20} />
+        </div>
+      )}
     </div>
   );
 };
